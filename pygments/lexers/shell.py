@@ -154,6 +154,9 @@ class ShellSessionBaseLexer(Lexer):
 
     .. versionadded:: 2.1
     """
+
+    _venv = re.compile(r'^\([^)]*\)')
+
     def get_tokens_unprocessed(self, text):
         innerlexer = self._innerLexerCls(**self.options)
 
@@ -165,6 +168,7 @@ class ShellSessionBaseLexer(Lexer):
         for match in line_re.finditer(text):
             line = match.group()
             m = re.match(self._ps1rgx, line)
+            venv_match = self._venv.match(line)
             if backslash_continuation:
                 curcode += line
                 backslash_continuation = curcode.endswith('\\\n')
@@ -183,6 +187,12 @@ class ShellSessionBaseLexer(Lexer):
                 insertions.append((len(curcode),
                                    [(0, Generic.Prompt, line[:len(self._ps2)])]))
                 curcode += line[len(self._ps2):]
+                backslash_continuation = curcode.endswith('\\\n')
+            elif venv_match:
+                venv_match = venv_match.group(0)
+                insertions.append((len(curcode),
+                    [(0, Generic.Prompt, line[:len(venv_match)])]))
+                curcode += line[len(venv_match):]
                 backslash_continuation = curcode.endswith('\\\n')
             else:
                 if insertions:
